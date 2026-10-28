@@ -83,6 +83,13 @@ export const priceOf = (a: Auction) => a.currentBid ?? a.startingPrice;
 export const nextMinBid = (a: Auction) =>
   a.currentBid ? a.currentBid + a.minIncrement : a.startingPrice;
 
+/**
+ * Returns true when the given userId is the seller of the auction.
+ * Used by the bid form (frontend guard) and testable in isolation.
+ */
+export const isSelfBid = (a: Auction, userId: string | null | undefined): boolean =>
+  !!userId && userId === a.sellerId;
+
 // ---- Row mappers: DB snake_case → app camelCase ----
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -412,6 +419,25 @@ export async function placeBid(auctionId: string, amount: number): Promise<Mutat
 
   if (!userId)
     return { ok: false, reason: "backend_not_connected", message: "You must be logged in to place a bid." };
+
+  // ── Self-bid guard (backend enforcement) ──────────────────────────────────
+  // Check seller_id directly in the DB so this rule holds even if the
+  // frontend UI is bypassed (e.g. direct API calls).
+  try {
+    const { data: auctionRow } = await supabase
+      .from("auctions")
+      .select("seller_id")
+      .eq("id", auctionId)
+      .maybeSingle();
+    if (auctionRow && auctionRow.seller_id === userId) {
+      return {
+        ok: false,
+        reason: "backend_not_connected",
+        message: "You cannot bid on your own listing.",
+      };
+    }
+  } catch {/* if the auction row can't be fetched (e.g. mock mode), skip the check */}
+  // ─────────────────────────────────────────────────────────────────────────
 
   const bidderName = profile?.name ?? "Bidder";
 

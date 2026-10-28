@@ -3,8 +3,9 @@ import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-quer
 import { useState } from "react";
 import { ArrowLeft, MapPin, MessageCircle, Star, TrendingUp } from "lucide-react";
 import { auctionQuery, studentQuery } from "@/lib/data/queries";
-import { askQuestion, nextMinBid, setAutoBidLimit } from "@/lib/data/api";
+import { askQuestion, isSelfBid, nextMinBid, setAutoBidLimit } from "@/lib/data/api";
 import { inr, reportResult } from "@/lib/format";
+import { useAuth } from "@/lib/auth";
 import { Countdown } from "@/components/campus/Countdown";
 import { PriceDisplay } from "@/components/campus/PriceDisplay";
 import { BidConfirmDialog } from "@/components/campus/BidConfirmDialog";
@@ -45,9 +46,13 @@ export const Route = createFileRoute("/auction/$id")({
 function AuctionPage() {
   const { id } = Route.useParams();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const { data: a } = useSuspenseQuery(auctionQuery(id));
   const { data: seller } = useQuery(studentQuery(a!.sellerId));
   const auction = a!;
+  // True when the signed-in user is the seller of this listing — hides the bid
+  // form and shows a notice instead. Enforced again in placeBid() and by a DB trigger.
+  const isSeller = isSelfBid(auction, user?.id);
   const min = nextMinBid(auction);
   const [photo, setPhoto] = useState(0);
   const [amount, setAmount] = useState(String(min));
@@ -60,6 +65,7 @@ function AuctionPage() {
 
   // Live bid and Q&A updates via Supabase Realtime
   useRealtimeAuction(id, queryClient);
+
 
 
   return (
@@ -128,8 +134,15 @@ function AuctionPage() {
               <div className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">Time left</div>
               <Countdown closesAt={auction.closesAt} large />
             </div>
-            {!closed && (
-              <form className="mt-6 space-y-3" onSubmit={(e) => { e.preventDefault(); if (!bidError) setConfirm(true); }}>
+            {/* ---- Bid section: hidden for the seller, shown for everyone else ---- */}
+            {!closed && isSeller && (
+              <div id="seller-no-bid-notice" className="mt-6 rounded-2xl border border-dashed border-muted-foreground/40 bg-muted px-5 py-4 text-sm text-muted-foreground">
+                🏷️ <span className="font-medium">You cannot bid on your own listing.</span>
+                <p className="mt-1 text-xs">Share this page so others can bid.</p>
+              </div>
+            )}
+            {!closed && !isSeller && (
+              <form id="bid-form" className="mt-6 space-y-3" onSubmit={(e) => { e.preventDefault(); if (!bidError) setConfirm(true); }}>
                 <Label htmlFor="bid">Your bid (₹)</Label>
                 <div className="flex gap-2">
                   <Input id="bid" type="number" className="h-12 text-lg" value={amount} onChange={(e) => setAmount(e.target.value)} />
@@ -144,7 +157,7 @@ function AuctionPage() {
                 {bidError && amount && <p className="text-sm text-destructive">{bidError}</p>}
               </form>
             )}
-            {!closed && (
+            {!closed && !isSeller && (
               <form className="mt-5 border-t pt-5" onSubmit={async (e) => { e.preventDefault(); if (Number(autoLimit) >= min) reportResult(await setAutoBidLimit(auction.id, Number(autoLimit))); }}>
                 <Label htmlFor="auto" className="flex items-center gap-1"><TrendingUp className="h-4 w-4" />Automatic bidding limit</Label>
                 <p className="mb-2 text-xs text-muted-foreground">We'll outbid others by the minimum increment up to this amount.</p>

@@ -108,6 +108,62 @@ export const auctions: Auction[] = [
     startingPrice: 800, minIncrement: 50, bids: bids(800, 50, ["Riya B."]),
     questions: [], sellerId: "s1", createdAt: at(-120), closesAt: at(-30), status: "closed", pickup: "Kumaon Hostel gate",
   }),
+  mk({
+    id: "a12", title: "Apple iPad Air 4 + Smart Keyboard", category: "Electronics", condition: "Like New",
+    description: "Perfect for notes and PDFs. Comes with Smart Keyboard and an Apple Pencil (2nd gen). Screen protector on since day one.",
+    photos: [u("photo-1593642632559-0c6d3fc62b89")],
+    startingPrice: 26000, minIncrement: 500, bids: bids(26000, 500, ["Aakash R.", "Neha S."]),
+    questions: [], sellerId: "s3", createdAt: at(-3), closesAt: at(4), status: "active", featured: true, pickup: "Aravali Hostel room 118",
+  }),
+  mk({
+    id: "a13", title: "CAT 2026 Complete Prep Kit (15 books)", category: "Books", condition: "Good",
+    description: "Ariman + FACT pages, VARC/DILR/Quants. Minimal marking, all solutions intact. Includes 3 mock-test booklets.",
+    photos: [u("photo-1544947950-fa07a98d237f")],
+    startingPrice: 1800, minIncrement: 100, bids: [],
+    questions: [], sellerId: "s2", createdAt: at(-1.5), closesAt: at(40), status: "active", pickup: "Himadri reception",
+  }),
+  mk({
+    id: "a14", title: "Firefox Fuego 21-gear Road Bike", category: "Cycles", condition: "Good",
+    description: "Lightweight alloy frame, recently serviced. Helmet and bottle cage included. Great for quick campus commutes.",
+    photos: [u("photo-1485965120184-e220f721d03e")],
+    startingPrice: 6500, minIncrement: 200, bids: bids(6500, 200, ["Manav D."]),
+    questions: [], sellerId: "s4", createdAt: at(-6), closesAt: at(7), status: "active", featured: true, pickup: "Kailash cycle stand",
+  }),
+  mk({
+    id: "a15", title: "Overstudy Desk Shelf + Organizer", category: "Furniture", condition: "Fair",
+    description: "Mountable wooden shelf with book dividers and a phone stand slot. Easy to carry, must pick up.",
+    photos: [u("photo-1555041469-a586c61ea9bc")],
+    startingPrice: 1200, minIncrement: 100, bids: [],
+    questions: [], sellerId: "s1", createdAt: at(-0.5), closesAt: at(2), status: "active", pickup: "Kumaon Hostel gate",
+  }),
+  mk({
+    id: "a16", title: "IFB 20L Microwave Oven", category: "Hostel Essentials", condition: "Good",
+    description: "Convection microwave, works perfectly. Ideal for hostel room. 1 year old, original bill available.",
+    photos: [u("photo-1507473885765-e6ed057f782c")],
+    startingPrice: 3200, minIncrement: 150, bids: bids(3200, 150, ["Sanya K.", "Aditya M."]),
+    questions: [], sellerId: "s3", createdAt: at(-8), closesAt: at(55), status: "active", pickup: "Aravali Hostel room 214",
+  }),
+  mk({
+    id: "a17", title: "Bansuri Indian Bamboo Flute", category: "Instruments", condition: "Like New",
+    description: "Krishna bansuri, mid octave. Handmade, rich tone. Comes with a soft carrying case.",
+    photos: [u("photo-1510915361894-db8b60106cb1")],
+    startingPrice: 1500, minIncrement: 100, bids: [],
+    questions: [], sellerId: "s2", createdAt: at(-2), closesAt: at(30), status: "active", pickup: "Himadri reception",
+  }),
+  mk({
+    id: "a18", title: "Yonex Badminton Racket Pair + Kit", category: "Sports", condition: "Good",
+    description: "Two Yonex Nanoracket rackets with covers, a tube of shuttles and overgrips. Used for one semester of club games.",
+    photos: [u("photo-1531415074968-036ba1b575da")],
+    startingPrice: 2200, minIncrement: 100, bids: bids(2200, 100, ["Rhea P."]),
+    questions: [], sellerId: "s4", createdAt: at(-0.2), closesAt: at(5), status: "active", featured: true, pickup: "Sports complex",
+  }),
+  mk({
+    id: "a19", title: "Logitech Wireless Mouse + Keyboard Combo", category: "Electronics", condition: "Like New",
+    description: "Silent-keys MK295 combo with a single USB receiver. Batteries included. Perfect desktop setup for a hostel room.",
+    photos: [u("photo-1505740420928-5e560c06d30e")],
+    startingPrice: 1100, minIncrement: 50, bids: [],
+    questions: [], sellerId: "s1", createdAt: at(-4), closesAt: at(48), status: "active", pickup: "Kumaon Hostel gate",
+  }),
 ];
 
 export const notifications: AppNotification[] = [

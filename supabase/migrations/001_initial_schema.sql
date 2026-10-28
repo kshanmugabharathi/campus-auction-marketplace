@@ -204,6 +204,37 @@ DO $$ BEGIN
     ON bids FOR INSERT WITH CHECK (auth.uid() = bidder_id);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
+-- Reject self-bids at the database level. A seller must never be able to bid
+-- on their own auction, even if they call the API directly and bypass the UI
+-- button guard (auction.$id.tsx) and the application guard (api.ts placeBid).
+-- This trigger is the authoritative backstop: it runs inside the same
+-- transaction as the INSERT, so the offending row is never written.
+CREATE OR REPLACE FUNCTION public.reject_self_bid()
+  RETURNS TRIGGER
+  LANGUAGE plpgsql
+  AS $fn$
+DECLARE
+  v_seller_id UUID;
+BEGIN
+  SELECT seller_id INTO v_seller_id
+    FROM public.auctions
+    WHERE id = NEW.auction_id;
+
+  IF v_seller_id IS NOT NULL AND v_seller_id = NEW.bidder_id THEN
+    RAISE EXCEPTION 'You cannot bid on your own listing.'
+      USING ERRCODE = 'check_violation';
+  END IF;
+
+  RETURN NEW;
+END;
+$fn$;
+
+DROP TRIGGER IF EXISTS trg_bids_reject_self_bid ON public.bids;
+CREATE TRIGGER trg_bids_reject_self_bid
+  BEFORE INSERT ON public.bids
+  FOR EACH ROW
+  EXECUTE FUNCTION public.reject_self_bid();
+
 -- QUESTIONS ------------------------------------------------------
 DO $$ BEGIN
   CREATE POLICY "questions_public_read"
