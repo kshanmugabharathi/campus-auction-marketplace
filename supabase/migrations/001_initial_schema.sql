@@ -291,24 +291,6 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- ---------------------------------------------------------------
--- REALTIME — add tables Supabase Realtime listens to, so new bids,
--- auction updates and seller answers broadcast to already-open pages
--- (see use-realtime-auction.ts). Re-adding an existing table raises
--- duplicate_object (SQLSTATE 42710), which we ignore for idempotency.
--- ---------------------------------------------------------------
-DO $$ BEGIN
-  ALTER PUBLICATION supabase_realtime ADD TABLE public.auctions;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
-DO $$ BEGIN
-  ALTER PUBLICATION supabase_realtime ADD TABLE public.bids;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
-DO $$ BEGIN
-  ALTER PUBLICATION supabase_realtime ADD TABLE public.questions;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
--- ---------------------------------------------------------------
 -- STORAGE BUCKET for auction photos
 -- Run these SEPARATELY after creating the bucket in the dashboard:
 --   Dashboard → Storage → New bucket → name "auction-photos" → Public

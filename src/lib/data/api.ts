@@ -86,14 +86,9 @@ export const nextMinBid = (a: Auction) =>
 /**
  * Returns true when the given userId is the seller of the auction.
  * Used by the bid form (frontend guard) and testable in isolation.
- * Trimmed + lower-cased so a formatting difference between the auth uid and
- * the stored seller_id can never produce a false negative.
  */
-export const isSelfBid = (a: Auction, userId: string | null | undefined): boolean => {
-  if (!userId) return false;
-  const norm = (v: string) => v.trim().toLowerCase();
-  return norm(userId) === norm(a.sellerId);
-};
+export const isSelfBid = (a: Auction, userId: string | null | undefined): boolean =>
+  !!userId && userId === a.sellerId;
 
 // ---- Row mappers: DB snake_case → app camelCase ----
 
@@ -670,7 +665,8 @@ export async function askQuestion(id: string, q: string): Promise<MutationResult
 /**
  * Seller answers a buyer's question on one of their own listings.
  * Only the auction's seller can update the row — enforced by the
- * `questions_seller_answer` RLS policy, so no ownership check is needed here.
+ * `questions_seller_answer` RLS policy. A 0-row update (RLS rejected it)
+ * is surfaced as an error instead of a false success.
  */
 export async function answerQuestion(questionId: string, answer: string): Promise<MutationResult> {
   const text = answer.trim();
@@ -692,7 +688,6 @@ export async function answerQuestion(questionId: string, answer: string): Promis
       .eq("id", questionId)
       .select("id");
     if (error) return { ok: false, reason: "backend_not_connected", message: error.message };
-    // A 0-row update means RLS silently rejected it — the user is not the seller.
     if (!data || data.length === 0)
       return {
         ok: false,
