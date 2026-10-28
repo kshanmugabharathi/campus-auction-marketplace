@@ -3,7 +3,7 @@ import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-quer
 import { useState } from "react";
 import { ArrowLeft, MapPin, MessageCircle, Star, TrendingUp } from "lucide-react";
 import { auctionQuery, studentQuery } from "@/lib/data/queries";
-import { askQuestion, isSelfBid, nextMinBid, setAutoBidLimit } from "@/lib/data/api";
+import { answerQuestion, askQuestion, isSelfBid, nextMinBid, setAutoBidLimit } from "@/lib/data/api";
 import { inr, reportResult } from "@/lib/format";
 import { useAuth } from "@/lib/auth";
 import { Countdown } from "@/components/campus/Countdown";
@@ -98,23 +98,36 @@ function AuctionPage() {
               {auction.questions.map((q) => (
                 <div key={q.id} className="rounded-2xl border p-4">
                   <p className="font-medium">Q: {q.question} <span className="text-xs font-normal text-muted-foreground">— {q.askedBy}</span></p>
-                  <p className="mt-1 text-sm text-muted-foreground">{q.answer ? `A: ${q.answer}` : "Awaiting seller's answer"}</p>
+                  {q.answer ? (
+                    <p className="mt-1 text-sm text-muted-foreground">A: {q.answer}</p>
+                  ) : isSeller ? (
+                    <AnswerForm questionId={q.id} onAnswered={() => queryClient.invalidateQueries({ queryKey: ["auction", id] })} />
+                  ) : (
+                    <p className="mt-1 text-sm text-muted-foreground">Awaiting seller's answer</p>
+                  )}
                 </div>
               ))}
             </div>
-            <form className="mt-4 flex gap-2" onSubmit={async (e) => {
-              e.preventDefault();
-              if (!question.trim()) return;
-              const result = await askQuestion(auction.id, question);
-              reportResult(result);
-              if (result.ok) {
-                setQuestion("");
-                queryClient.invalidateQueries({ queryKey: ["auction", id] });
-              }
-            }}>
-              <Textarea rows={1} value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="Ask the seller a question" />
-              <Button type="submit" variant="outline">Ask</Button>
-            </form>
+            {!isSeller && (
+              <form className="mt-4 flex gap-2" onSubmit={async (e) => {
+                e.preventDefault();
+                if (!question.trim()) return;
+                const result = await askQuestion(auction.id, question);
+                reportResult(result);
+                if (result.ok) {
+                  setQuestion("");
+                  queryClient.invalidateQueries({ queryKey: ["auction", id] });
+                }
+              }}>
+                <Textarea rows={1} value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="Ask the seller a question" />
+                <Button type="submit" variant="outline">Ask</Button>
+              </form>
+            )}
+            {isSeller && (
+              <p className="mt-4 text-sm text-muted-foreground">
+                You're the seller — use the <span className="font-medium">Answer</span> box on each question above. Your reply posts as the answer, not a new question.
+              </p>
+            )}
           </div>
         </div>
 
@@ -197,5 +210,31 @@ function AuctionPage() {
       </div>
       <BidConfirmDialog auction={auction} amount={amt} open={confirm} onOpenChange={setConfirm} />
     </div>
+  );
+}
+
+/** Inline answer box shown to the seller on an unanswered buyer question. */
+function AnswerForm({ questionId, onAnswered }: { questionId: string; onAnswered: () => void }) {
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  return (
+    <form
+      className="mt-2 flex gap-2"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        if (!text.trim() || busy) return;
+        setBusy(true);
+        const result = await answerQuestion(questionId, text);
+        reportResult(result, "Answer posted");
+        if (result.ok) {
+          setText("");
+          onAnswered();
+        }
+        setBusy(false);
+      }}
+    >
+      <Input value={text} onChange={(e) => setText(e.target.value)} placeholder="Write your answer…" className="h-9" />
+      <Button type="submit" size="sm" variant="outline" disabled={busy || !text.trim()}>Answer</Button>
+    </form>
   );
 }

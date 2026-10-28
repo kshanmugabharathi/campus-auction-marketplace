@@ -86,9 +86,14 @@ export const nextMinBid = (a: Auction) =>
 /**
  * Returns true when the given userId is the seller of the auction.
  * Used by the bid form (frontend guard) and testable in isolation.
+ * Trimmed + lower-cased so a formatting difference between the auth uid and
+ * the stored seller_id can never produce a false negative.
  */
-export const isSelfBid = (a: Auction, userId: string | null | undefined): boolean =>
-  !!userId && userId === a.sellerId;
+export const isSelfBid = (a: Auction, userId: string | null | undefined): boolean => {
+  if (!userId) return false;
+  const norm = (v: string) => v.trim().toLowerCase();
+  return norm(userId) === norm(a.sellerId);
+};
 
 // ---- Row mappers: DB snake_case → app camelCase ----
 
@@ -656,6 +661,44 @@ export async function askQuestion(id: string, q: string): Promise<MutationResult
       question: q,
     });
     if (error) return { ok: false, reason: "backend_not_connected", message: error.message };
+    return { ok: true };
+  } catch (e: unknown) {
+    return { ok: false, reason: "backend_not_connected", message: String(e) };
+  }
+}
+
+/**
+ * Seller answers a buyer's question on one of their own listings.
+ * Only the auction's seller can update the row — enforced by the
+ * `questions_seller_answer` RLS policy, so no ownership check is needed here.
+ */
+export async function answerQuestion(questionId: string, answer: string): Promise<MutationResult> {
+  const text = answer.trim();
+  if (!text)
+    return { ok: false, reason: "backend_not_connected", message: "Answer cannot be empty." };
+
+  let userId: string | undefined;
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    userId = user?.id;
+  } catch {/* fall through */}
+  if (!userId)
+    return { ok: false, reason: "backend_not_connected", message: "You must be logged in to answer." };
+
+  try {
+    const { data, error } = await supabase
+      .from("questions")
+      .update({ answer: text })
+      .eq("id", questionId)
+      .select("id");
+    if (error) return { ok: false, reason: "backend_not_connected", message: error.message };
+    // A 0-row update means RLS silently rejected it — the user is not the seller.
+    if (!data || data.length === 0)
+      return {
+        ok: false,
+        reason: "backend_not_connected",
+        message: "Only the seller of this listing can answer, and you must be logged in as that seller.",
+      };
     return { ok: true };
   } catch (e: unknown) {
     return { ok: false, reason: "backend_not_connected", message: String(e) };
