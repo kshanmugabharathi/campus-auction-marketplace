@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -11,6 +12,7 @@ export function BidConfirmDialog({
   auction, amount, open, onOpenChange,
 }: { auction: Auction; amount: number; open: boolean; onOpenChange: (o: boolean) => void }) {
   const [busy, setBusy] = useState(false);
+  const queryClient = useQueryClient();
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
@@ -33,7 +35,15 @@ export function BidConfirmDialog({
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction disabled={busy} onClick={async (e) => {
             e.preventDefault(); setBusy(true);
-            reportResult(await placeBid(auction.id, amount), "Bid placed");
+            const result = await placeBid(auction.id, amount);
+            reportResult(result, "Bid placed");
+            if (result.ok) {
+              // Refresh the auction detail, home feed, and browse list
+              queryClient.invalidateQueries({ queryKey: ["auction", auction.id] });
+              queryClient.invalidateQueries({ queryKey: ["home"] });
+              queryClient.invalidateQueries({ queryKey: ["auctions"] });
+              queryClient.invalidateQueries({ queryKey: ["buyer-dash"] });
+            }
             setBusy(false); onOpenChange(false);
           }}>Yes, place {inr(amount)} bid</AlertDialogAction>
         </AlertDialogFooter>

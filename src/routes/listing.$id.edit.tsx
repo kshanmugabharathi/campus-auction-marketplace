@@ -1,5 +1,5 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
+import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { PageHeader } from "@/components/campus/AppShell";
 import { ListingForm } from "@/components/campus/ListingForm";
 import { auctionQuery } from "@/lib/data/queries";
@@ -27,13 +27,23 @@ export const Route = createFileRoute("/listing/$id/edit")({
 function Edit() {
   const { id } = Route.useParams();
   const { data } = useSuspenseQuery(auctionQuery(id));
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const a = data!;
   return (
     <div className="mx-auto max-w-3xl px-4 pt-8">
       <PageHeader title="Edit listing" subtitle={a.title} action={<Button asChild variant="outline"><Link to="/seller">Back to dashboard</Link></Button>} />
       <div className="rounded-3xl border bg-card p-6 shadow-card md:p-8">
         <ListingForm initial={a} lockPricing={a.bids.length > 0} submitLabel="Save changes"
-          onSubmit={async (v) => reportResult(await updateListing(a.id, v), "Listing updated")} />
+          onSubmit={async (v) => {
+            const result = await updateListing(a.id, v);
+            reportResult(result, "Listing updated");
+            if (result.ok) {
+              queryClient.invalidateQueries({ queryKey: ["auction", id] });
+              queryClient.invalidateQueries({ queryKey: ["seller-dash"] });
+              navigate({ to: "/seller" });
+            }
+          }} />
       </div>
     </div>
   );

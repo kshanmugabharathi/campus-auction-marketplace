@@ -1,7 +1,9 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { Gavel, Home, LayoutGrid, Plus, Sparkles, User, Store, Info } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/lib/auth";
+import { signOut } from "@/lib/data/api";
 
 const nav = [
   { to: "/", label: "Marketplace", icon: Home },
@@ -14,12 +16,20 @@ const nav = [
 export function DemoBanner() {
   return (
     <div className="bg-navy px-4 py-1.5 text-center text-xs text-navy-foreground">
-      <Info className="mr-1 inline h-3 w-3" /> Preview with sample listings — bidding, listing and accounts go live once the backend is connected.
+      <Info className="mr-1 inline h-3 w-3" /> Connected to Supabase — sign up or log in to bid, list and track your campus auctions.
     </div>
   );
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate({ to: "/" });
+  };
+
   return (
     <div className="min-h-screen pb-20 md:pb-0">
       <DemoBanner />
@@ -40,7 +50,16 @@ export function AppShell({ children }: { children: ReactNode }) {
           </nav>
           <div className="ml-auto flex items-center gap-2">
             <Button asChild size="sm" className="hidden sm:inline-flex"><Link to="/sell"><Plus className="h-4 w-4" />List item</Link></Button>
-            <Button asChild size="sm" variant="outline"><Link to="/login">Log in</Link></Button>
+            {user ? (
+              <>
+                <span className="hidden sm:inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+                  {(user.email ?? "U").slice(0, 1).toUpperCase()}
+                </span>
+                <Button size="sm" variant="outline" onClick={handleSignOut}>Log out</Button>
+              </>
+            ) : (
+              <Button asChild size="sm" variant="outline"><Link to="/login">Log in</Link></Button>
+            )}
           </div>
         </div>
       </header>

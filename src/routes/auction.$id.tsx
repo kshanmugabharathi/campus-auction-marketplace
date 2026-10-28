@@ -1,5 +1,5 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { ArrowLeft, MapPin, MessageCircle, Star, TrendingUp } from "lucide-react";
 import { auctionQuery, studentQuery } from "@/lib/data/queries";
@@ -8,6 +8,7 @@ import { inr, reportResult } from "@/lib/format";
 import { Countdown } from "@/components/campus/Countdown";
 import { PriceDisplay } from "@/components/campus/PriceDisplay";
 import { BidConfirmDialog } from "@/components/campus/BidConfirmDialog";
+import { useRealtimeAuction } from "@/hooks/use-realtime-auction";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,6 +44,7 @@ export const Route = createFileRoute("/auction/$id")({
 
 function AuctionPage() {
   const { id } = Route.useParams();
+  const queryClient = useQueryClient();
   const { data: a } = useSuspenseQuery(auctionQuery(id));
   const { data: seller } = useQuery(studentQuery(a!.sellerId));
   const auction = a!;
@@ -55,6 +57,10 @@ function AuctionPage() {
   const amt = Number(amount);
   const bidError = !amt ? "Enter an amount" : amt < min ? `Minimum bid is ${inr(min)}` : null;
   const closed = auction.status !== "active";
+
+  // Live bid and Q&A updates via Supabase Realtime
+  useRealtimeAuction(id, queryClient);
+
 
   return (
     <div className="mx-auto max-w-7xl px-4 pt-6">
@@ -90,7 +96,16 @@ function AuctionPage() {
                 </div>
               ))}
             </div>
-            <form className="mt-4 flex gap-2" onSubmit={async (e) => { e.preventDefault(); if (!question.trim()) return; reportResult(await askQuestion(auction.id, question)); }}>
+            <form className="mt-4 flex gap-2" onSubmit={async (e) => {
+              e.preventDefault();
+              if (!question.trim()) return;
+              const result = await askQuestion(auction.id, question);
+              reportResult(result);
+              if (result.ok) {
+                setQuestion("");
+                queryClient.invalidateQueries({ queryKey: ["auction", id] });
+              }
+            }}>
               <Textarea rows={1} value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="Ask the seller a question" />
               <Button type="submit" variant="outline">Ask</Button>
             </form>

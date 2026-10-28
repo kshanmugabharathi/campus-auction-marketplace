@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { AuthCard } from "@/components/campus/AuthCard";
 import { signUp } from "@/lib/data/api";
@@ -22,6 +22,7 @@ export const Route = createFileRoute("/signup")({
 function Signup() {
   const [f, setF] = useState({ name: "", email: "", college: "", hostel: "", password: "" });
   const [err, setErr] = useState("");
+  const navigate = useNavigate();
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value });
   return (
     <AuthCard title="Create your account" subtitle="Students only — use your college email." footer={<>Already registered? <Link to="/login" className="font-semibold text-primary">Log in</Link></>}>
@@ -29,7 +30,10 @@ function Signup() {
         e.preventDefault();
         if (!/\.(ac|edu)(\.in)?$/i.test(f.email.split("@")[1] ?? "")) return setErr("Use your college email (ending in .ac.in or .edu)");
         if (f.password.length < 8) return setErr("Password must be at least 8 characters");
-        setErr(""); reportResult(await signUp(f));
+        setErr("");
+        const result = await signUp(f);
+        reportResult(result, "Account created — check your email to confirm");
+        if (result.ok) navigate({ to: "/login" });
       }}>
         <div className="space-y-2"><Label htmlFor="n">Full name</Label><Input id="n" required value={f.name} onChange={set("name")} /></div>
         <div className="space-y-2"><Label htmlFor="e">College email</Label><Input id="e" type="email" required placeholder="you@iitd.ac.in" value={f.email} onChange={set("email")} /></div>

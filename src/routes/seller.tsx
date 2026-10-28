@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Check, Pencil, Plus, X } from "lucide-react";
 import { sellerDashQuery } from "@/lib/data/queries";
@@ -42,8 +42,15 @@ function Stat({ label, value }: { label: string; value: string }) {
 
 function Seller() {
   const { data } = useSuspenseQuery(sellerDashQuery());
+  const queryClient = useQueryClient();
   const [busyId, setBusyId] = useState<string | null>(null);
-  const decide = async (id: string, approve: boolean) => { setBusyId(id); reportResult(await decideWinningPrice(id, approve)); setBusyId(null); };
+  const decide = async (id: string, approve: boolean) => {
+    setBusyId(id);
+    const result = await decideWinningPrice(id, approve);
+    reportResult(result);
+    if (result.ok) queryClient.invalidateQueries({ queryKey: ["seller-dash"] });
+    setBusyId(null);
+  };
   return (
     <div className="mx-auto max-w-6xl px-4 pt-8">
       <PageHeader title="Seller dashboard" subtitle="Sample data for Aarav Sharma, Kumaon Hostel"
@@ -71,7 +78,15 @@ function Seller() {
                     <AlertDialogHeader><AlertDialogTitle>Cancel this auction?</AlertDialogTitle>
                       <AlertDialogDescription>All {a.bids.length} bidders will be notified and their bids voided.</AlertDialogDescription></AlertDialogHeader>
                     <AlertDialogFooter><AlertDialogCancel>Keep it</AlertDialogCancel>
-                      <AlertDialogAction onClick={async () => reportResult(await cancelListing(a.id))}>Cancel auction</AlertDialogAction></AlertDialogFooter>
+                      <AlertDialogAction onClick={async () => {
+                        const result = await cancelListing(a.id);
+                        reportResult(result);
+                        if (result.ok) {
+                          queryClient.invalidateQueries({ queryKey: ["seller-dash"] });
+                          queryClient.invalidateQueries({ queryKey: ["auctions"] });
+                          queryClient.invalidateQueries({ queryKey: ["home"] });
+                        }
+                      }}>Cancel auction</AlertDialogAction></AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
               </div>

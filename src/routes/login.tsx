@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { AuthCard } from "@/components/campus/AuthCard";
 import { signIn } from "@/lib/data/api";
@@ -22,9 +22,15 @@ export const Route = createFileRoute("/login")({
 function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const navigate = useNavigate();
   return (
     <AuthCard title="Welcome back" subtitle="Log in with your college email." footer={<>New here? <Link to="/signup" className="font-semibold text-primary">Create an account</Link></>}>
-      <form className="space-y-4" onSubmit={async (e) => { e.preventDefault(); reportResult(await signIn(email, password)); }}>
+      <form className="space-y-4" onSubmit={async (e) => {
+        e.preventDefault();
+        const result = await signIn(email, password);
+        reportResult(result, "Logged in");
+        if (result.ok) navigate({ to: "/" });
+      }}>
         <div className="space-y-2"><Label htmlFor="email">College email</Label><Input id="email" type="email" required placeholder="you@iitd.ac.in" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
         <div className="space-y-2"><Label htmlFor="pw">Password</Label><Input id="pw" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} /></div>
         <Button type="submit" className="w-full" size="lg">Log in</Button>
